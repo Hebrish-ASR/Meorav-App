@@ -15,7 +15,9 @@ not started.
 | Model | Meorav v2.1: Qwen3-TTS-12Hz-1.7B full fine-tune, built-in speaker `daniel`; GGUFs on Hugging Face as `Hebrish/Meorav-GGUF` and on the Hebrish CDN |
 | Licence | App code MIT (same as Hebrish-ASR/Hebrish-App). The voice model is non-commercial, under <https://hebrish.app/terms> |
 
-Status (2026-10-22): v0.1.0 is built and signed by CI. **Not yet run on a device.** See
+Status (2026-10-22): v0.1.0 released (`Meorav-0.1.0.apk`, 2,990,858 bytes, SHA-256
+`42a634df51a8eaef189f8f92912c3d8be0dcf9d4457bf9d7f923f885c89d1d7c`) and live in the Hebrish
+F-Droid index. **Not yet run on a device.** See
 "Verified / not verified" below.
 
 ## What the app does
@@ -134,6 +136,13 @@ Verified:
 - All four GGUFs on the CDN: size via ranged GET (206, Content-Range totals match); full
   SHA-256 of the Q4_K_M pair re-downloaded from `cdn.hebrish.app` matches.
 
+- v0.1.0 release: CI passed on the first run; not a prerelease; APK signer SHA-256 `5cf68223…6994`
+  (apksigner), label "Meorav (beta)", native code arm64-v8a only; one build-provenance attestation
+  (`gh api repos/Hebrish-ASR/Meorav-App/attestations/sha256:<digest>`).
+- `https://fdroid.hebrish.app/repo/index-v2.json` lists `app.hebrish.meorav` 0.1.0 with that signer,
+  and `/repo/Meorav-0.1.0.apk` is served (200, same size).
+- `catalog.json` on the CDN is byte-identical to `catalog/catalog.json`.
+
 Not verified (no arm64 device or emulator here):
 - Anything on a phone: load, speed, RAM, download/resume, playback, save/share, UI layout.
 - Whether 8 GB phones survive the ~4 GB peak (Android's low-memory killer may end the app).
@@ -150,5 +159,7 @@ Not verified (no arm64 device or emulator here):
   directly with the pinned hash. Update it when moving the submodule.
 - ggml (`cc5df49a`) is itself a submodule of qwentts.cpp: check out with `--recursive`
   (`actions/checkout` `submodules: recursive`).
+- The laptop's `gh` predates `gh attestation` ("unknown command"); check attestations with
+  `gh api repos/Hebrish-ASR/Meorav-App/attestations/sha256:$(sha256sum Meorav-X.Y.Z.apk | cut -d' ' -f1)`.
 - On the laptop `sdkmanager` exited 2 with "...location of your Java installation" because
   `JAVA_HOME` was unset; run it with `JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64`.
