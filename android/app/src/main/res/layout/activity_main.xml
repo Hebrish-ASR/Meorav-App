@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#FFF3CD"
+            android:padding="12dp"
+            android:text="@string/banner"
+            android:textColor="#664D03"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Voice model"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/quant"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/modelStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" />
+
+        <ProgressBar
+            android:id="@+id/progress"
+            style="@android:style/Widget.Material.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="1000"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/download"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Download" />
+
+            <Button
+                android:id="@+id/delete"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Delete model" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="top"
+            android:hint="@string/hint"
+            android:inputType="textMultiLine|textCapSentences"
+            android:maxLength="2000"
+            android:minLines="5"
+            android:text="@string/sample_text" />
+
+        <CheckBox
+            android:id="@+id/spellNumbers"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="Spell out numbers (12 → twelve)" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/speak"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:text="Speak" />
+
+            <Button
+                android:id="@+id/stop"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Stop" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/play"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Play again" />
+
+            <Button
+                android:id="@+id/save"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Save WAV" />
+
+            <Button
+                android:id="@+id/share"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Share" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/device"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textColor="#666666"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/about"
+            style="@android:style/Widget.Material.Button.Borderless.Colored"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="About Meorav" />
+    </LinearLayout>
+</ScrollView>

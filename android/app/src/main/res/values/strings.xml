@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Meorav (beta)</string>
+    <string name="banner">Experimental — public testing. Speech is generated on your phone and can be slow.</string>
+    <string name="hint">Type something for Meorav to say…</string>
+    <string name="sample_text">Hi, this is Meorav. I\'m speaking from your phone, with no internet needed. I just got my teudat zehut sorted at the misrad hapnim, so that\'s one thing off the list.</string>
+</resources>

@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "updated": "2026-10-22",
+  "voices": [
+    {
+      "id": "meorav-v2.1",
+      "name": "Meorav v2.1",
+      "version": "v2.1",
+      "speaker": "daniel",
+      "lang": "english",
+      "description": "Daniel Rosehill's voice: Irish-accented English with Hebrew words. Qwen3-TTS-12Hz-1.7B full fine-tune, converted with qwentts.cpp 5916bf7.",
+      "hf_repo": "Hebrish/Meorav-GGUF",
+      "quants": [
+        {
+          "id": "Q4_K_M",
+          "label": "Q4_K_M (recommended)",
+          "default": true,
+          "min_ram_gb": 8,
+          "note": "About 4 GB of RAM while speaking.",
+          "files": [
+            {
+              "role": "talker",
+              "name": "qwen-talker-1.7b-customvoice-Q4_K_M.gguf",
+              "url": "https://cdn.hebrish.app/models/meorav/v2.1/gguf/qwen-talker-1.7b-customvoice-Q4_K_M.gguf",
+              "size": 1182631104,
+              "sha256": "a24e414e8b388a69601bdd2930a235dda7663e782e144668c81cb6e62fdb4a53"
+            },
+            {
+              "role": "codec",
+              "name": "qwen-tokenizer-12hz-Q4_K_M.gguf",
+              "url": "https://cdn.hebrish.app/models/meorav/v2.1/gguf/qwen-tokenizer-12hz-Q4_K_M.gguf",
+              "size": 254974752,
+              "sha256": "cf3788b4d50aaa665fb6e57c170396aae03a3555fea52d2b5d0cda902d658039"
+            }
+          ]
+        },
+        {
+          "id": "Q8_0",
+          "label": "Q8_0 (needs 12 GB+ RAM)",
+          "default": false,
+          "min_ram_gb": 12,
+          "note": "About 6 GB of RAM while speaking. Slightly higher quality, slower.",
+          "files": [
+            {
+              "role": "talker",
+              "name": "qwen-talker-1.7b-customvoice-Q8_0.gguf",
+              "url": "https://cdn.hebrish.app/models/meorav/v2.1/gguf/qwen-talker-1.7b-customvoice-Q8_0.gguf",
+              "size": 2042834112,
+              "sha256": "473171aeaf3db9edf7b47e79eb2038842389cb6f1b446900374151abdcfceda4"
+            },
+            {
+              "role": "codec",
+              "name": "qwen-tokenizer-12hz-Q8_0.gguf",
+              "url": "https://cdn.hebrish.app/models/meorav/v2.1/gguf/qwen-tokenizer-12hz-Q8_0.gguf",
+              "size": 291150624,
+              "sha256": "1883beeed99348fc35e23dd225e9082f93f6f8c109330a33d935baa8acdbfd94"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

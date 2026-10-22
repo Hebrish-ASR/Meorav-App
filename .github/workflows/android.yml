@@ -1,0 +1,74 @@
+# Tag vX.Y.Z -> signed release APK (Meorav-X.Y.Z.apk) attached to a GitHub release.
+# NOT a prerelease: Hebrish-FDroid's fetch skips prereleases, so "beta" lives in the app label,
+# the release title and the notes instead.
+name: android
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  # Build provenance: check an APK with gh attestation verify Meorav-X.Y.Z.apk -R Hebrish-ASR/Meorav-App
+  id-token: write
+  attestations: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Tag matches version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          # scripts/release-tag.sh sets both together; a hand-made tag that disagrees fails here.
+          code=$(sed -n 's/^ *versionName = "\(.*\)"$/\1/p' app/build.gradle.kts)
+          [ "v$code" = "$GITHUB_REF_NAME" ] || { echo "::error::tag $GITHUB_REF_NAME but versionName is $code"; exit 1; }
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: NDK and CMake
+        # Pinned in app/build.gradle.kts (ndkVersion, cmake version); the runner image may not carry them.
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.0.13004108" "cmake;3.22.1" > /dev/null
+      - name: Keystore
+        run: echo "${{ secrets.RELEASE_KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+      - name: Build
+        env:
+          RELEASE_KEYSTORE: ${{ runner.temp }}/release.jks
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+        run: ./gradlew --console=plain assembleRelease
+      - name: Rename and check signer
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          [ "$GITHUB_REF_TYPE" = tag ] || VER="0.0.0-dev"
+          echo "VER=$VER" >> "$GITHUB_ENV"
+          cp app/build/outputs/apk/release/app-release.apk "../Meorav-${VER}.apk"
+          # Must be the Hebrish app signing certificate, or F-Droid/updates break.
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/apksigner" verify --print-certs "../Meorav-${VER}.apk" | tee /dev/stderr \
+            | grep -qi "SHA-256 digest: 5cf6822350d0b2ff124021a0df10bec1c63a6e5e6159fa6029507134a1446994" \
+            || { echo "::error::APK is not signed with the Hebrish release key"; exit 1; }
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: Meorav-${{ env.VER }}.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: Meorav-${{ env.VER }}.apk
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "Meorav-${VER}.apk" \
+            --title "Meorav (beta) ${VER}" --notes-file .github/release-notes.md
