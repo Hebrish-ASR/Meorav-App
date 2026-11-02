@@ -49,8 +49,9 @@ folder, never an overwrite.
 | Q8_0 | `qwen-talker-1.7b-customvoice-Q8_0.gguf` | 2042834112 | `473171aeaf3db9edf7b47e79eb2038842389cb6f1b446900374151abdcfceda4` |
 | Q8_0 | `qwen-tokenizer-12hz-Q8_0.gguf` | 291150624 | `1883beeed99348fc35e23dd225e9082f93f6f8c109330a33d935baa8acdbfd94` |
 
-URL: `https://cdn.hebrish.app/models/meorav/v2.1/gguf/<file>` (R2 bucket `hebrish-cdn`, uploaded
-2026-10-22 with the `r2-upload` skill in Voice-Model-Training-Plugin).
+URL: `https://cdn.hebrish.app/models/meorav/<file>` (R2 bucket `hebrish-cdn`; one fixed folder per
+model since 2026-11-02, overwritten by each new version, so only `catalog.json`'s version, sizes and hashes change. It was
+`models/meorav/` until then; first uploaded 2026-10-22 with the `r2-upload` skill in Voice-Model-Training-Plugin).
 
 **Catalogue:** `catalog/catalog.json` (schema 1) lists voices → quants → files (role `talker` /
 `codec`, url, size, sha256, `min_ram_gb`). It is
