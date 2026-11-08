@@ -1,0 +1,6 @@
+#!/usr/bin/python3 -I
+# meorav-say "text" -o out.wav  (Meorav (beta) command line). Package code: /usr/lib/meorav/meorav.
+import sys
+sys.path.insert(0, "/usr/lib/meorav")
+from meorav.cli import main
+sys.exit(main())

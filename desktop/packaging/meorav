@@ -1,0 +1,6 @@
+#!/usr/bin/python3 -I
+# Meorav (beta) desktop window. Package code lives in /usr/lib/meorav/meorav.
+import sys
+sys.path.insert(0, "/usr/lib/meorav")
+from meorav.gui import main
+sys.exit(main())

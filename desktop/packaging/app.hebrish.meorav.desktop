@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Meorav (beta)
+GenericName=Text to speech
+Comment=Type text and hear it in the Meorav voice, generated on this computer (experimental)
+Exec=meorav
+Icon=app.hebrish.meorav
+Terminal=false
+Categories=AudioVideo;Audio;Utility;
+Keywords=tts;speech;voice;hebrish;
+StartupNotify=true
+StartupWMClass=app.hebrish.meorav
