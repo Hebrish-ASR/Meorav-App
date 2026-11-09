@@ -13,6 +13,10 @@ model files, CDN keys, catalogue format, native build design, release steps and 
 - Moving the qwentts.cpp submodule: update the `QWEN_VERSION` string in
   `android/app/src/main/cpp/CMakeLists.txt`, re-check `qwen.h` (QT_ABI_VERSION 6 at 5916bf7),
   and re-run a local `./gradlew assembleRelease`.
+- Linux desktop app (package `meorav`) is in `desktop/` (README there): tags `desktop-v<ver>`
+  (never `v*`, which is Android and F-Droid), published to the Hebrish APT repo with the
+  Hebrish-App repo's `desktop/scripts/publish-apt.sh`, which keeps 3 versions per package. Never
+  run a synthesis on Daniel's laptop; CI speaks one line on every tag.
 - Don't touch the Hebrish dictation app (Hebrish-ASR/Hebrish-App) or its releases. Website and
   changelog changes are Daniel's. Not listed on Obtainium.
 - Nothing here has run on a device yet (as of 2026-10-22). Record device results in README

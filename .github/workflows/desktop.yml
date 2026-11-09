@@ -1,0 +1,85 @@
+# Meorav (beta) for Linux: tag desktop-vX.Y.Z -> meorav_X.Y.Z-1_amd64.deb on a GitHub release.
+# Pushes touching desktop/ only build and self-test. On a tag or a manual run the job also
+# downloads the real Q4_K_M voice (1.44 GB from cdn.hebrish.app) and speaks one line: the
+# end-to-end check, kept off Daniel's laptop. The Android workflow listens on v* tags only, and
+# F-Droid reads vX.Y.Z only, so desktop-v* tags touch neither.
+# Publishing to the Hebrish APT repo is a separate, manual step (desktop/README.md, "Releasing").
+name: desktop
+on:
+  push:
+    tags: ["desktop-v*"]
+    branches: [main]
+    paths: ["desktop/**", ".github/workflows/desktop.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  # gh attestation verify meorav_X.Y.Z-1_amd64.deb -R Hebrish-ASR/Meorav-App
+  id-token: write
+  attestations: write
+
+jobs:
+  deb:
+    runs-on: ubuntu-latest
+    container: ubuntu:26.04
+    defaults: { run: { working-directory: desktop } }
+    steps:
+      - name: Build tools
+        working-directory: /
+        run: |
+          apt-get update -q
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
+            git ca-certificates cmake g++ make binutils python3 python3-pytest python3-numpy
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Tag matches version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          v=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' meorav/__init__.py)
+          [ "desktop-v$v" = "$GITHUB_REF_NAME" ] || { echo "::error::tag $GITHUB_REF_NAME but __version__ is $v"; exit 1; }
+      - name: Tests
+        run: python3 -m pytest -q tests
+      - name: Build
+        run: ./build-deb.sh
+      - name: v2 build has no AVX
+        run: |
+          n=$(objdump -d build/v2/libmeorav.so | grep -c ymm || true)
+          [ "$n" = 0 ] || { echo "::error::v2 libmeorav.so uses AVX ($n ymm instructions)"; exit 1; }
+      - name: Install and self-test
+        run: |
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -q ./dist/meorav_*_amd64.deb
+          meorav --selftest
+          MEORAV_LIB_DIR=/usr/lib/meorav/meorav/lib PYTHONPATH=/usr/lib/meorav python3 -c \
+            "from meorav import engine; print(engine.find_library('v2'))"
+      - name: Speak one line (real voice)
+        if: github.event_name != 'push' || startsWith(github.ref, 'refs/tags/')
+        run: |
+          cd "$RUNNER_TEMP"
+          meorav --say "Testing Meorav on the desktop, before Shabbat, b'ezrat Hashem." -o speak.wav | tee speak.txt
+          python3 -c "import wave; w = wave.open('speak.wav'); s = w.getnframes() / w.getframerate(); print(f'{s:.1f} s'); assert s > 1.0"
+          echo "### Speak one line" >> "$GITHUB_STEP_SUMMARY"; cat speak.txt >> "$GITHUB_STEP_SUMMARY"
+      - name: Name
+        run: echo "DEB=$(ls dist/meorav_*_amd64.deb)" >> "$GITHUB_ENV"
+      - uses: actions/attest-build-provenance@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with: { subject-path: "desktop/${{ env.DEB }}" }
+      - uses: actions/upload-artifact@v4
+        with: { name: deb, path: "desktop/${{ env.DEB }}" }
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: deb
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: deb, path: dist }
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Not "Latest": that stays the Android release. Not a prerelease either (house rule).
+          gh release create "$GITHUB_REF_NAME" dist/*.deb --latest=false \
+            --title "Meorav (beta) for Linux ${GITHUB_REF_NAME#desktop-v}" \
+            --notes-file .github/desktop-release-notes.md

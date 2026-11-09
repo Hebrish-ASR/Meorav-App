@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Meorav (beta)
+GenericName=Text to speech
+Comment=Type text and hear it in Daniel Rosehill's voice, generated on your computer
+Exec=meorav
+Icon=meorav
+Terminal=false
+Categories=AudioVideo;Audio;Utility;
+Keywords=tts;speech;voice;text to speech;Hebrish;
+StartupWMClass=meorav

@@ -2,8 +2,8 @@
 
 Experimental Android text-to-speech app: type text, and it is spoken in Daniel Rosehill's cloned
 voice (Irish-accented English with Hebrew words), generated **on the phone**. Public testing
-build, separate from the Hebrish dictation (speech-to-text) app. A desktop version is planned,
-not started.
+build, separate from the Hebrish dictation (speech-to-text) app. A Linux desktop version (package
+`meorav`, Hebrish APT repo) is in [`desktop/`](desktop/README.md) since 0.1.0 (2026-11-09).
 
 | | |
 | --- | --- |
@@ -149,6 +149,17 @@ Not verified (no arm64 device or emulator here):
 - Anything on a phone: load, speed, RAM, download/resume, playback, save/share, UI layout.
 - Whether 8 GB phones survive the ~4 GB peak (Android's low-memory killer may end the app).
 - Phone speed. Expect several times slower than real time on a Dimensity 9000.
+
+### Desktop (2026-11-09)
+
+Verified on daniellaptop (build only, no synthesis there):
+- `libmeorav.so` builds for x86_64 from `desktop/native` in both levels; needs only glibc
+  (static libstdc++); the v2 build has no `ymm` (AVX) instructions, the v3 build has.
+- `meorav --selftest` loads the v3 library (`qwentts 5916bf7 (2026-10-16)`); the window opens
+  offscreen, reads the live catalogue and lists Meorav v2.2 Q4_K_M and Q8_0.
+- Download, Range resume and SHA-256 rejection pass against a local server (`desktop/tests`).
+
+Synthesis with the real voice is checked in CI only (workflow `desktop`, step "Speak one line").
 
 ## Traps hit while building
 

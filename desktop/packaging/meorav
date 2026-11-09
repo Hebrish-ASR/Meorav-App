@@ -1,0 +1,3 @@
+#!/bin/sh
+# Meorav (beta) launcher: the app and its native library live in /usr/lib/meorav.
+PYTHONPATH=/usr/lib/meorav${PYTHONPATH:+:$PYTHONPATH} exec /usr/bin/python3 -m meorav "$@"

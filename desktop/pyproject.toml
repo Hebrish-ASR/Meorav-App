@@ -1,0 +1,21 @@
+[project]
+name = "meorav"
+dynamic = ["version"]
+description = "Meorav (beta): text to speech in Daniel Rosehill's voice, on the CPU (qwentts.cpp)"
+requires-python = ">=3.10"
+license = "MIT"
+# Installed from apt in the .deb (python3-pyside6.qtwidgets, python3-numpy, python3-sounddevice).
+dependencies = ["PySide6-Essentials", "numpy", "sounddevice"]
+
+[project.scripts]
+meorav = "meorav.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = { attr = "meorav.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["meorav*"]
