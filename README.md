@@ -160,6 +160,9 @@ Verified on daniellaptop (build only, no synthesis there):
 - Download, Range resume and SHA-256 rejection pass against a local server (`desktop/tests`).
 
 Synthesis with the real voice is checked in CI only (workflow `desktop`, step "Speak one line").
+First pass, run 42616035833 (2026-11-09, GitHub `ubuntu-latest` runner, 4 vCPU, `ubuntu:26.04`
+container, installed `.deb`, v3 build): Meorav v2.2 Q4_K_M, 5.3 s of audio in 10.1 s (RTF 1.91),
+load 1.2 s. With no sound server, `import sounddevice` raises; the app then only loses playback.
 
 ## Traps hit while building
 
