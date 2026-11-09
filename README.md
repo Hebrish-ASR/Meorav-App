@@ -12,7 +12,7 @@ not started.
 | Distribution | GitHub releases of this repo, and the Hebrish F-Droid repo `https://fdroid.hebrish.app/repo` |
 | Signing | the Hebrish app key (cert SHA-256 `5CF6822350D0B2FF124021A0DF10BEC1C63A6E5E6159FA6029507134A1446994`) |
 | Engine | [qwentts.cpp](https://github.com/ServeurpersoCom/qwentts.cpp) (MIT), submodule `third_party/qwentts.cpp` pinned at `5916bf7` (2026-10-16), ggml `cc5df49a`, CPU backend |
-| Model | Meorav v2.1: Qwen3-TTS-12Hz-1.7B full fine-tune, built-in speaker `daniel`; GGUFs on Hugging Face as `Hebrish/Meorav-GGUF` and on the Hebrish CDN |
+| Model | Meorav v2.2: Qwen3-TTS-12Hz-1.7B full fine-tune, built-in speaker `daniel`; GGUFs on Hugging Face as `Hebrish/Meorav-GGUF` and on the Hebrish CDN |
 | Licence | App code MIT (same as Hebrish-ASR/Hebrish-App). The voice model is non-commercial, under <https://hebrish.app/terms> |
 
 Status (2026-10-22): v0.1.0 released (`Meorav-0.1.0.apk`, 2,990,858 bytes, SHA-256
@@ -39,14 +39,15 @@ No AndroidX and no third-party Kotlin dependencies (`android.useAndroidX=false`,
 ## Model files and the catalogue
 
 A voice is a **matching pair**: talker GGUF + codec (12 Hz tokenizer) GGUF of the same quant.
-CDN keys are immutable (`public, max-age=31536000, immutable`); a new model version gets a new
-folder, never an overwrite.
+Since 2026-11-02 the files live in one fixed CDN folder that each model version overwrites (`public, max-age=300`).
+The table is Meorav v2.2 (2026-11-09, from `Hebrish/Meorav` `936eea1a`): new talker files, same sizes as v2.1's,
+and codec files byte-identical to v2.1's.
 
 | Quant | File | Bytes | SHA-256 |
 | --- | --- | --- | --- |
-| Q4_K_M | `qwen-talker-1.7b-customvoice-Q4_K_M.gguf` | 1182631104 | `a24e414e8b388a69601bdd2930a235dda7663e782e144668c81cb6e62fdb4a53` |
+| Q4_K_M | `qwen-talker-1.7b-customvoice-Q4_K_M.gguf` | 1182631104 | `7e91b3b53e7cba8b0a079231128480c6bcd36a2793ea9fbb38ad01ce9f1117fb` |
 | Q4_K_M | `qwen-tokenizer-12hz-Q4_K_M.gguf` | 254974752 | `cf3788b4d50aaa665fb6e57c170396aae03a3555fea52d2b5d0cda902d658039` |
-| Q8_0 | `qwen-talker-1.7b-customvoice-Q8_0.gguf` | 2042834112 | `473171aeaf3db9edf7b47e79eb2038842389cb6f1b446900374151abdcfceda4` |
+| Q8_0 | `qwen-talker-1.7b-customvoice-Q8_0.gguf` | 2042834112 | `b32f62ca0d96f05fce320361e3339f0e704de902c1a4f56431127b4e332d5b0f` |
 | Q8_0 | `qwen-tokenizer-12hz-Q8_0.gguf` | 291150624 | `1883beeed99348fc35e23dd225e9082f93f6f8c109330a33d935baa8acdbfd94` |
 
 URL: `https://cdn.hebrish.app/models/meorav/<file>` (R2 bucket `hebrish-cdn`; one fixed folder per
