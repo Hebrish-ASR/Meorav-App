@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "updated": "2026-10-22",
+  "updated": "2026-11-09",
   "voices": [
     {
-      "id": "meorav-v2.1",
-      "name": "Meorav v2.1",
-      "version": "v2.1",
+      "id": "meorav-v2.2",
+      "name": "Meorav v2.2",
+      "version": "v2.2",
       "speaker": "daniel",
       "lang": "english",
-      "description": "Daniel Rosehill's voice: Irish-accented English with Hebrew words. Qwen3-TTS-12Hz-1.7B full fine-tune, converted with qwentts.cpp 5916bf7.",
+      "description": "Daniel Rosehill's voice: Irish-accented English with Hebrew words. Qwen3-TTS-12Hz-1.7B full fine-tune, converted with qwentts.cpp 5916bf7 from Hebrish/Meorav 936eea1a.",
       "hf_repo": "Hebrish/Meorav-GGUF",
       "quants": [
         {
@@ -23,7 +23,7 @@
               "name": "qwen-talker-1.7b-customvoice-Q4_K_M.gguf",
               "url": "https://cdn.hebrish.app/models/meorav/qwen-talker-1.7b-customvoice-Q4_K_M.gguf",
               "size": 1182631104,
-              "sha256": "a24e414e8b388a69601bdd2930a235dda7663e782e144668c81cb6e62fdb4a53"
+              "sha256": "7e91b3b53e7cba8b0a079231128480c6bcd36a2793ea9fbb38ad01ce9f1117fb"
             },
             {
               "role": "codec",
@@ -46,7 +46,7 @@
               "name": "qwen-talker-1.7b-customvoice-Q8_0.gguf",
               "url": "https://cdn.hebrish.app/models/meorav/qwen-talker-1.7b-customvoice-Q8_0.gguf",
               "size": 2042834112,
-              "sha256": "473171aeaf3db9edf7b47e79eb2038842389cb6f1b446900374151abdcfceda4"
+              "sha256": "b32f62ca0d96f05fce320361e3339f0e704de902c1a4f56431127b4e332d5b0f"
             },
             {
               "role": "codec",
