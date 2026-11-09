@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 import sys
 import time
 
@@ -18,7 +19,12 @@ def _selftest() -> int:
     L.meorav_version.restype = ctypes.c_char_p
     print(f"meorav {__version__}; cpu {level}; lib {lib}; qwentts {L.meorav_version().decode()}")
     import PySide6  # noqa: F401  (the window's dependency)
-    import sounddevice  # noqa: F401
+    try:  # needs a running sound server; without one only playback is lost (Save WAV still works)
+        import sounddevice
+        print(f"audio: {sounddevice.query_hostapis(0)['name']}")
+    except Exception as e:
+        print(f"audio: unavailable ({str(e).splitlines()[0][:120]})")
+    print(f"app: {Path(__file__).parent}")
     print("selftest ok")
     return 0
 
