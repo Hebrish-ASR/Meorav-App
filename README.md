@@ -174,6 +174,42 @@ First pass, run 42616035833 (2026-11-09, GitHub `ubuntu-latest` runner, 4 vCPU, 
 container, installed `.deb`, v3 build): Meorav v2.2 Q4_K_M, 5.3 s of audio in 10.1 s (RTF 1.91),
 load 1.2 s. With no sound server, `import sounddevice` raises; the app then only loses playback.
 
+### Desktop 0.2.0 (2026-11-16): Meorav-Multi-Voice and Windows
+
+Verified:
+- Multi-Voice GGUFs (Modal, `scripts/gguf_modal.py`): base-mode talkers carry the speaker encoder
+  (76 `spk_enc.*` tensors); codec files byte-identical to v2.2's; all nine CDN objects answer 200 with
+  the right `content-length`; the five clips hash correctly from the CDN. Table: `desktop/README.md`.
+- CI synthesis with the repo catalogue (`MEORAV_CATALOG`), Q4_K_M, v3 builds, GitHub-hosted 4-vCPU runners,
+  same line "Testing Meorav on the desktop/Windows, before Shabbat, b'ezrat Hashem.":
+
+  | Run (2026-11-16) | Platform | Model / voice | Audio | Time | RTF | Load |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | 43878402456 | Linux (`ubuntu:26.04`, installed `.deb`) | v2.2 / daniel | 4.2 s | 8.2 s | 1.97 | 1.2 s |
+  | 43878402456 | Linux | Multi-Voice / josh | 3.6 s | 7.2 s | 2.01 | 1.2 s |
+  | 43879833360 | Linux | v2.2 / daniel | 5.1 s | 14.6 s | 2.85 | 1.6 s |
+  | 43879833360 | Linux | Multi-Voice / josh | 3.5 s | 10.4 s | 2.95 | 1.6 s |
+  | 43879833360 | Windows (`windows-latest`, unzipped portable zip) | Multi-Voice / josh | 3.4 s | 12.1 s | 3.53 | 1.5 s |
+
+  Runner speed varies between runs (same code, Linux RTF 1.97 vs 2.85). The two Linux WAVs of run
+  43878402456 are 24 kHz, non-silent (RMS 0.085 / 0.090, 66–68 % voiced 20 ms frames), 4.2 s and 3.6 s.
+- On Linux the Multi-Voice download fetched only the talker and the clips: the codec was copied from
+  the installed v2.2 files (no "downloading qwen-tokenizer" line in the log).
+- Windows: `meorav.dll` (MSVC 14.51, VS 18) depends only on `KERNEL32.dll` and `ADVAPI32.dll`; the
+  zip (108 MB) self-tests from outside the checkout with both the v3 and the forced v2 DLL
+  (`audio: MME`, `avatars: 5/5`); the model landed in `%LOCALAPPDATA%\Meorav\models\`.
+- The window (offscreen on the laptop, fake catalogue, no synthesis): model switch, five avatar
+  buttons with name + accent, red "Proof of concept" badge and note.
+
+Not verified:
+- Nobody has listened to the CI WAVs yet (artifacts `speak-linux`, `speak-windows`, kept 14 days), so
+  "Josh sounds like the HF reference clip" is assumed, not checked. No speaker-similarity score.
+- Rivka, Nigel, Fiona and Bazza were never synthesised (only Josh in CI); Q8_0 Multi-Voice never run.
+- RAM use of the Multi-Voice model (assumed ~4 GB like v2.2: same architecture and quant).
+- The v2 (SSE4.2) builds were never run on a CPU without AVX2; Windows v2 was only loaded (selftest).
+- The Windows app on a real desktop: window, playback, `Meorav.bat`, Defender/SmartScreen
+  behaviour (the zip is not code-signed).
+
 ## Traps hit while building
 
 - qwentts.cpp's top-level `CMakeLists.txt` can't be `add_subdirectory`'d: its macro uses
@@ -187,5 +223,15 @@ load 1.2 s. With no sound server, `import sounddevice` raises; the app then only
   (`actions/checkout` `submodules: recursive`).
 - The laptop's `gh` predates `gh attestation` ("unknown command"); check attestations with
   `gh api repos/Hebrish-ASR/Meorav-App/attestations/sha256:$(sha256sum Meorav-X.Y.Z.apk | cut -d' ' -f1)`.
+- Desktop 0.2.0, Modal: `ephemeral_disk` must be 512 GiB or more (a 60 GiB request is rejected
+  before the run starts); the default disk was enough for the 3.9 GB checkpoint and 7.7 GB F32
+  talker. `huggingface_hub[hf_transfer]` no longer has that extra (hub 2.4). qwentts' `convert.py`
+  needs torch (it opens safetensors with `framework="pt"`) and picks its converter from the folder
+  name, so the HF snapshot is symlinked as `checkpoints/Qwen3-TTS-12Hz-1.7B-Base` and
+  `checkpoints/Qwen3-TTS-Tokenizer-12Hz` (the repo's `speech_tokenizer/`).
+- Desktop 0.2.0, Windows: a `dumpbin /disasm meorav.dll | ymm` check fails on the v2 build because the
+  static MSVC CRT carries CPUID-dispatched AVX code; check the ggml/qwen static libraries instead
+  (see the workflow step "v2 build has no unguarded AVX"). The Windows default text encoding is not
+  UTF-8: every `read_text`/`write_text` passes `encoding="utf-8"`.
 - On the laptop `sdkmanager` exited 2 with "...location of your Java installation" because
   `JAVA_HOME` was unset; run it with `JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64`.

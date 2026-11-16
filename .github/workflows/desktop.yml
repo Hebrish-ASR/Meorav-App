@@ -99,10 +99,12 @@ jobs:
           python -m pytest -q tests
       - name: Build
         run: ./build-windows.ps1
-      - name: v2 build has no AVX
-        # Checked on our static libraries (ggml, ggml-base, ggml-cpu, qwen-core), not on meorav.dll:
-        # the DLL also holds the static MSVC CRT, whose memcpy/memset carry AVX paths behind a
-        # runtime CPUID check (__isa_available); those are safe and made the DLL count 215 (run 43878402456).
+      - name: v2 build has no unguarded AVX
+        # Checked on our static libraries (ggml, ggml-base, ggml-cpu, qwen-core), not on meorav.dll,
+        # which also holds the static MSVC CRT (215 ymm hits in run 43878402456). In the libraries
+        # the only hits (run 43879833360, MSVC 14.51) are 5 in an inlined `wmemchr` in ggml.lib: the
+        # MSVC headers' vectorised wmemchr, which must branch on __isa_available (runtime CPUID)
+        # before its AVX2 path. A hit in a function that does not read __isa_available fails the job.
         run: |
           $libs = Get-ChildItem -Recurse -Filter *.lib build\win-v2 | Where-Object { $_.Name -match '^(ggml|qwen)' }
           if ($libs.Count -lt 3) { throw "expected ggml*/qwen-core .lib files, found: $($libs.Name)" }
@@ -111,16 +113,19 @@ jobs:
             $d = dumpbin /disasm $l.FullName
             $hits = $d | Select-String -SimpleMatch "ymm"
             "$($l.Name): $($hits.Count) ymm"
-            if ($hits.Count) {
-              $bad += $l.Name
-              # show the enclosing function (dumpbin prints "name:" labels) of every hit
-              foreach ($h in $hits) {
-                $fn = ($d[0..($h.LineNumber - 1)] | Select-String -Pattern '^[^\s].*:$' | Select-Object -Last 1).Line
-                "  in $fn :: $($h.Line.Trim())"
-              }
+            $seen = @{}
+            foreach ($h in $hits) {
+              $lab = $d[0..($h.LineNumber - 1)] | Select-String -Pattern '^[^\s].*:$' | Select-Object -Last 1
+              if ($seen.ContainsKey($lab.LineNumber)) { continue }
+              $seen[$lab.LineNumber] = 1
+              $body = $d[($lab.LineNumber - 1)..($h.LineNumber - 1)]
+              $guard = $body | Select-String -SimpleMatch "isa_available"
+              "  $($l.Name) $($lab.Line) first ymm at line $($h.LineNumber); guard: $(if ($guard) { $guard[0].Line.Trim() } else { 'NONE' })"
+              $body | Select-Object -First 40 | ForEach-Object { "    $_" }
+              if (-not $guard) { $bad += "$($l.Name):$($lab.Line)" }
             }
           }
-          if ($bad) { "::warning::v2 libraries with ymm instructions: $bad (see the functions above)" }
+          if ($bad) { throw "v2 libraries with unguarded ymm instructions: $bad" }
           $l3 = Get-ChildItem -Recurse -Filter ggml-cpu.lib build\win-v3
           "v3 ggml-cpu.lib ymm: $((dumpbin /disasm $l3[0].FullName | Select-String -SimpleMatch 'ymm').Count)"
           dumpbin /dependents build\win-v3\Release\meorav.dll
