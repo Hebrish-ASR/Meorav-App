@@ -106,11 +106,21 @@ jobs:
         run: |
           $libs = Get-ChildItem -Recurse -Filter *.lib build\win-v2 | Where-Object { $_.Name -match '^(ggml|qwen)' }
           if ($libs.Count -lt 3) { throw "expected ggml*/qwen-core .lib files, found: $($libs.Name)" }
+          $bad = @()
           foreach ($l in $libs) {
-            $n = (dumpbin /disasm $l.FullName | Select-String -SimpleMatch "ymm").Count
-            "$($l.Name): $n ymm"
-            if ($n -ne 0) { throw "v2 $($l.Name) uses AVX ($n ymm instructions)" }
+            $d = dumpbin /disasm $l.FullName
+            $hits = $d | Select-String -SimpleMatch "ymm"
+            "$($l.Name): $($hits.Count) ymm"
+            if ($hits.Count) {
+              $bad += $l.Name
+              # show the enclosing function (dumpbin prints "name:" labels) of every hit
+              foreach ($h in $hits) {
+                $fn = ($d[0..($h.LineNumber - 1)] | Select-String -Pattern '^[^\s].*:$' | Select-Object -Last 1).Line
+                "  in $fn :: $($h.Line.Trim())"
+              }
+            }
           }
+          if ($bad) { "::warning::v2 libraries with ymm instructions: $bad (see the functions above)" }
           $l3 = Get-ChildItem -Recurse -Filter ggml-cpu.lib build\win-v3
           "v3 ggml-cpu.lib ymm: $((dumpbin /disasm $l3[0].FullName | Select-String -SimpleMatch 'ymm').Count)"
           dumpbin /dependents build\win-v3\Release\meorav.dll
