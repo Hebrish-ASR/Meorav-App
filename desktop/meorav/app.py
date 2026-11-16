@@ -1,4 +1,7 @@
-"""The Meorav window: pick a quant, download it once, type text, Speak, play or save the WAV.
+"""The Meorav window: pick a model and a voice, download it once, type text, Speak, play or save the WAV.
+
+Models come from the catalogue (models.models_of): Meorav v2.2 (Daniel's voice, built-in speaker)
+and Meorav-Multi-Voice (five reference-clip voices, shown with a "Proof of concept" badge).
 
 Everything slow (catalogue, download, model load, synthesis) runs on a worker QThread; the UI
 polls engine progress with a timer, as the Android app does.
@@ -8,15 +11,38 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot, Qt
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import (QApplication, QComboBox, QFileDialog, QHBoxLayout, QLabel, QMainWindow,
-                               QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QVBoxLayout, QWidget)
+from PySide6.QtCore import QObject, QSize, QThread, QTimer, Signal, Slot, Qt
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
+from PySide6.QtWidgets import (QApplication, QButtonGroup, QComboBox, QFileDialog, QHBoxLayout, QLabel,
+                               QMainWindow, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton,
+                               QToolButton, QVBoxLayout, QWidget)
 
-from . import __version__, engine, models
+from . import __version__, engine, models, voices
 
 SAMPLE = "I'm heading to the shuk before Shabbat, so let's talk after, b'ezrat Hashem."
 BANNER = "Experimental: public testing. Speech is generated on your CPU and can be slower than real time."
+
+
+POC_NOTE = ("Proof of concept: Meorav-Multi-Voice was trained on too little data. Hebrew words do not always "
+            "come out right; gutturals such as the ch in chag are not always produced.")
+AVATAR_PX = 64
+
+
+def _avatar(voice_id: str, name: str) -> QIcon:
+    p = voices.avatar_path(voice_id)
+    if p:
+        return QIcon(QPixmap(str(p)).scaled(AVATAR_PX * 2, AVATAR_PX * 2, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+    pm = QPixmap(AVATAR_PX * 2, AVATAR_PX * 2)  # placeholder: initial on a grey square
+    pm.fill(QColor("#9aa0a6"))
+    qp = QPainter(pm)
+    qp.setPen(QColor("white"))
+    f = QFont()
+    f.setPixelSize(AVATAR_PX)
+    f.setBold(True)
+    qp.setFont(f)
+    qp.drawText(pm.rect(), Qt.AlignCenter, (name or "?")[:1].upper())
+    qp.end()
+    return QIcon(pm)
 
 
 def _mb(n: int) -> str:
@@ -47,10 +73,11 @@ class Window(QMainWindow):
         super().__init__()
         self.setWindowTitle(f"Meorav (beta) {__version__}")
         self.setWindowIcon(QIcon.fromTheme("meorav"))
-        self.resize(620, 480)
+        self.resize(720, 620)
         self.cfg = models.load_config()
         self.catalog: dict | None = None
-        self.voice: dict | None = None
+        self.voice: dict | None = None      # the catalogue model ("voices" entry)
+        self.speaker: dict | None = None    # the voice within it (id, name, accent, ref)
         self.engine: engine.Engine | None = None
         self.engine_key: tuple | None = None
         self.audio = None
@@ -64,14 +91,39 @@ class Window(QMainWindow):
         banner.setWordWrap(True)
         banner.setStyleSheet("background:#fff3cd;color:#664d03;padding:6px;border-radius:4px;")
 
+        self.model = QComboBox()
+        self.model.currentIndexChanged.connect(self._model_changed)
+        self.poc = QLabel("Proof of concept")
+        self.poc.setStyleSheet("background:#b02a37;color:white;font-weight:bold;padding:3px 8px;border-radius:8px;")
+        self.poc.hide()
+        mrow = QHBoxLayout()
+        mrow.addWidget(QLabel("Model:"))
+        mrow.addWidget(self.model, 1)
+        mrow.addWidget(self.poc)
+
         self.quant = QComboBox()
         self.quant.currentIndexChanged.connect(self._quant_changed)
         self.dl_btn = QPushButton("Download")
         self.dl_btn.clicked.connect(self._download_or_delete)
         row = QHBoxLayout()
-        row.addWidget(QLabel("Voice:"))
+        row.addWidget(QLabel("Quality:"))
         row.addWidget(self.quant, 1)
         row.addWidget(self.dl_btn)
+
+        # Voice picker: one button per voice (avatar, name, accent), exclusive.
+        self.voice_group = QButtonGroup(self)
+        self.voice_group.setExclusive(True)
+        self.voice_group.idClicked.connect(self._speaker_clicked)
+        self.voice_box = QWidget()
+        self.voice_row = QHBoxLayout(self.voice_box)
+        self.voice_row.setContentsMargins(0, 0, 0, 0)
+        self.voice_row.setSpacing(6)
+        self.voice_box.setStyleSheet("QToolButton{padding:4px;border:2px solid transparent;border-radius:6px;}"
+                                     "QToolButton:checked{border-color:#1f6feb;background:#dbe9ff;}")
+        self.poc_note = QLabel(POC_NOTE)
+        self.poc_note.setWordWrap(True)
+        self.poc_note.setStyleSheet("background:#f8d7da;color:#58151c;padding:6px;border-radius:4px;")
+        self.poc_note.hide()
 
         self.text = QPlainTextEdit(self.cfg.get("last_text", SAMPLE))
         self.text.setPlaceholderText("Type what Meorav should say")
@@ -98,7 +150,10 @@ class Window(QMainWindow):
         lay = QVBoxLayout()
         for w in (banner,):
             lay.addWidget(w)
+        lay.addLayout(mrow)
         lay.addLayout(row)
+        lay.addWidget(self.voice_box)
+        lay.addWidget(self.poc_note)
         lay.addWidget(self.text, 1)
         lay.addLayout(btns)
         lay.addWidget(self.bar)
@@ -163,18 +218,77 @@ class Window(QMainWindow):
     # ---- catalogue and quants -------------------------------------------------------------
     def _catalog_loaded(self, cat: dict):
         self.catalog = cat
-        self.voice = cat["voices"][0]
+        ms = models.models_of(cat)
+        if not ms:
+            self.status.setText("The model list has no model this version can run.")
+            return
+        self.model.blockSignals(True)
+        self.model.clear()
+        want = self.cfg.get("model")
+        idx = 0
+        for i, m in enumerate(ms):
+            n = len(models.speakers_of(m))
+            self.model.addItem(f"{m['name']}" + (f" · {n} voices" if n > 1 else ""), m["id"])
+            if m["id"] == want:
+                idx = i
+        self.model.setCurrentIndex(idx)
+        self.model.blockSignals(False)
+        self._model_changed()
+
+    def _model_changed(self, *_):
+        mid = self.model.currentData()
+        m = next((m for m in models.models_of(self.catalog or {}) if m["id"] == mid), None)
+        if not m:
+            return
+        self.voice = m
+        self.cfg["model"] = m["id"]
+        poc = bool(m.get("poc"))
+        self.poc.setVisible(poc)
+        self.poc_note.setVisible(poc)
+        # voices
+        for b in self.voice_group.buttons():
+            self.voice_group.removeButton(b)
+            b.deleteLater()
+        while self.voice_row.count():
+            it = self.voice_row.takeAt(0)
+            if it.widget():
+                it.widget().hide()
+                it.widget().setParent(None)
+                it.widget().deleteLater()
+        spks = models.speakers_of(m)
+        want_v = self.cfg.get("voices", {}).get(m["id"])
+        self.speaker = next((x for x in spks if x["id"] == want_v), spks[0])
+        for i, sp in enumerate(spks):
+            b = QToolButton()
+            b.setCheckable(True)
+            b.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+            b.setIcon(_avatar(sp["id"], sp["name"]))
+            b.setIconSize(QSize(AVATAR_PX, AVATAR_PX))
+            b.setText(f"{sp['name']}\n{sp.get('accent', '')}".strip())
+            b.setToolTip(f"{sp['name']}: {sp.get('accent', '')}. --voice {sp['id']} on the command line.")
+            b.setMinimumWidth(104)
+            b.setChecked(sp is self.speaker)
+            self.voice_group.addButton(b, i)
+            self.voice_row.addWidget(b)
+        self.voice_row.addStretch(1)
+        # quants
         self.quant.blockSignals(True)
         self.quant.clear()
-        want = self.cfg.get("quant")
+        want = self.cfg.get("quants", {}).get(m["id"]) or (self.cfg.get("quant") if m is models.models_of(self.catalog)[0] else None)
         idx = 0
-        for i, q in enumerate(self.voice["quants"]):
-            self.quant.addItem(f"{self.voice['name']} · {q['label']} · {_mb(models.total_size(q))}", q["id"])
+        for i, q in enumerate(m["quants"]):
+            self.quant.addItem(f"{q['label']} · {_mb(models.total_size(q))}", q["id"])
             if q["id"] == want or (not want and q.get("default")):
                 idx = i
         self.quant.setCurrentIndex(idx)
         self.quant.blockSignals(False)
         self._quant_changed()
+
+    def _speaker_clicked(self, i: int):
+        spks = models.speakers_of(self.voice)
+        self.speaker = spks[i]
+        self.cfg.setdefault("voices", {})[self.voice["id"]] = self.speaker["id"]
+        models.save_config(self.cfg)
 
     def _current_quant(self) -> dict | None:
         if not self.voice:
@@ -186,7 +300,9 @@ class Window(QMainWindow):
         q = self._current_quant()
         if not q:
             return
-        self.cfg["quant"] = q["id"]
+        self.cfg.setdefault("quants", {})[self.voice["id"]] = q["id"]
+        if self.voice is models.models_of(self.catalog)[0]:
+            self.cfg["quant"] = q["id"]  # 0.1.0's key
         models.save_config(self.cfg)
         if models.is_installed(self.voice, q):
             self.status.setText(f"{self.voice['name']} {q['id']} is downloaded. {q.get('note', '')}")
@@ -201,6 +317,9 @@ class Window(QMainWindow):
         busy = self._busy()
         speaking = busy and self.speak_btn.text() == "Stop"
         self.quant.setEnabled(not busy)
+        self.model.setEnabled(not busy)
+        for b in self.voice_group.buttons():
+            b.setEnabled(not busy)
         self.dl_btn.setText("Cancel" if busy and self.dl_btn.text() == "Cancel" else
                             ("Delete" if installed else "Download"))
         self.dl_btn.setEnabled(q is not None and (not busy or self.dl_btn.text() == "Cancel"))
@@ -216,7 +335,7 @@ class Window(QMainWindow):
         if models.is_installed(self.voice, q):
             if QMessageBox.question(self, "Delete voice", f"Delete {q['id']} ({_mb(models.total_size(q))})?") \
                     == QMessageBox.Yes:
-                if self.engine_key and self.engine_key[1] == q["id"]:
+                if self.engine_key == (self.voice["id"], q["id"]):
                     self.engine.close()
                     self.engine = self.engine_key = None
                 models.delete(self.voice, q)
@@ -256,7 +375,8 @@ class Window(QMainWindow):
         self.cfg["last_text"] = self.text.toPlainText()
         models.save_config(self.cfg)
         q = self._current_quant()
-        key = (self.voice["id"], q["id"])
+        voice, spk = self.voice, self.speaker
+        key = (voice["id"], q["id"])
         self.speak_btn.setText("Stop")
         self.bar.setRange(0, 0)
         self.bar.setFormat("")
@@ -271,13 +391,14 @@ class Window(QMainWindow):
                     self.engine.close()
                     self.engine = None
                 t = time.monotonic()
-                self.engine = engine.Engine(models.file_path(self.voice, q, "talker"),
-                                            models.file_path(self.voice, q, "codec"))
+                self.engine = engine.Engine(models.file_path(voice, q, "talker"),
+                                            models.file_path(voice, q, "codec"))
                 self.engine_key = key
                 info["load"] = time.monotonic() - t
             t = time.monotonic()
-            audio, sr = self.engine.synthesize(text, speaker=self.voice.get("speaker", "daniel"),
-                                               lang=self.voice.get("lang", "english"))
+            ref = engine.load_wav_24k(models.ref_path(voice, spk)) if spk.get("ref") else None
+            audio, sr = self.engine.synthesize(text, speaker=spk["id"], lang=voice.get("lang", "english"),
+                                               ref_audio=ref)
             info["gen"] = time.monotonic() - t
             return audio, sr, info
 
@@ -286,7 +407,7 @@ class Window(QMainWindow):
             self.audio, self.sr, info = res
             secs = len(self.audio) / self.sr
             load = f", model load {info['load']:.1f} s" if "load" in info else ""
-            self.status.setText(f"{secs:.1f} s of speech in {info['gen']:.1f} s "
+            self.status.setText(f"{spk['name']}: {secs:.1f} s of speech in {info['gen']:.1f} s "
                                 f"(real-time factor {info['gen'] / secs:.2f}){load}. "
                                 f"CPU build {engine.cpu_level()}.")
             self._play()

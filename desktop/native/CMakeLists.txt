@@ -1,4 +1,4 @@
-# libmeorav.so for Linux x86_64: qwentts.cpp (Qwen3-TTS on ggml, CPU backend) + the flat C API in
+# libmeorav.so (Linux x86_64) / meorav.dll (Windows x64, MSVC): qwentts.cpp (Qwen3-TTS on ggml, CPU backend) + the flat C API in
 # meorav_c.cpp, loaded by the Python app with ctypes. Mirrors android/app/src/main/cpp/CMakeLists.txt.
 #
 #   cmake -S desktop/native -B build -DMEORAV_X86_LEVEL=v3 && cmake --build build -j
@@ -6,9 +6,20 @@
 # MEORAV_X86_LEVEL picks the instruction set, because ggml is static and GGML_NATIVE is off:
 #   v3   AVX2 + FMA + F16C (Intel Haswell 2013+, AMD Zen 2017+): the fast build
 #   v2   SSE4.2 only: the fallback for older CPUs; the app picks it when /proc/cpuinfo lacks avx2
-# A v3 build on a CPU without AVX2 dies with SIGILL, so the package ships both.
+# A v3 build on a CPU without AVX2 dies with SIGILL (Windows: illegal instruction), so the
+# package ships both.
+#
+# Windows (since 0.2.0): MSVC, static CRT (/MT), so meorav.dll needs only system DLLs:
+#   cmake -S desktop/native -B build/v3 -A x64 -DMEORAV_X86_LEVEL=v3 && cmake --build build/v3 --config Release
 cmake_minimum_required(VERSION 3.22)
 project(meorav_desktop C CXX)
+if(MSVC)
+    # Static CRT: no VC++ redistributable needed next to meorav.dll.
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    # qwentts sources carry non-ASCII literals and use fopen & co (same flags as its own CMake).
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+    add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/utf-8>)
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -65,8 +76,11 @@ target_include_directories(qwen-core PUBLIC ${QT_DIR}/src ${QT_DIR} ${QT_GEN})
 target_include_directories(qwen-core SYSTEM PUBLIC ${QT_DIR}/ggml/include)
 target_link_libraries(qwen-core PUBLIC ggml)
 
+find_package(Threads REQUIRED)
 add_library(meorav SHARED meorav_c.cpp)
 set_target_properties(meorav PROPERTIES CXX_VISIBILITY_PRESET hidden C_VISIBILITY_PRESET hidden)
-target_link_libraries(meorav PRIVATE qwen-core)
-# Static libstdc++/libgcc: the .so then needs only glibc, whatever the system's GCC.
-target_link_options(meorav PRIVATE -static-libstdc++ -static-libgcc -Wl,--exclude-libs,ALL)
+target_link_libraries(meorav PRIVATE qwen-core Threads::Threads)
+if(NOT MSVC)
+    # Static libstdc++/libgcc: the .so then needs only glibc, whatever the system's GCC.
+    target_link_options(meorav PRIVATE -static-libstdc++ -static-libgcc -Wl,--exclude-libs,ALL)
+endif()

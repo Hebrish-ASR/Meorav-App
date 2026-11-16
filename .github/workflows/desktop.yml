@@ -1,7 +1,8 @@
-# Meorav (beta) for Linux: tag desktop-vX.Y.Z -> meorav_X.Y.Z-1_amd64.deb on a GitHub release.
-# Pushes touching desktop/ only build and self-test. On a tag or a manual run the job also
-# downloads the real Q4_K_M voice (1.44 GB from cdn.hebrish.app) and speaks one line: the
-# end-to-end check, kept off Daniel's laptop. The Android workflow listens on v* tags only, and
+# Meorav (beta) desktop: tag desktop-vX.Y.Z -> meorav_X.Y.Z-1_amd64.deb (job deb) and
+# Meorav-X.Y.Z-windows-x64.zip (job windows, since 0.2.0) on one GitHub release.
+# Pushes touching desktop/ only build and self-test. On a tag or a manual run the jobs also
+# download the real Q4_K_M models from cdn.hebrish.app and speak: Linux Daniel (Meorav v2.2) and
+# Josh (Meorav-Multi-Voice), Windows Josh. The end-to-end check, kept off Daniel's laptop. The Android workflow listens on v* tags only, and
 # F-Droid reads vX.Y.Z only, so desktop-v* tags touch neither.
 # Publishing to the Hebrish APT repo is a separate, manual step (desktop/README.md, "Releasing").
 name: desktop
@@ -9,7 +10,7 @@ on:
   push:
     tags: ["desktop-v*"]
     branches: [main]
-    paths: ["desktop/**", ".github/workflows/desktop.yml"]
+    paths: ["desktop/**", "catalog/**", ".github/workflows/desktop.yml"]
   workflow_dispatch:
 
 permissions:
@@ -51,16 +52,24 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt-get install -y -q ./dist/meorav_*_amd64.deb
           cd "$RUNNER_TEMP"   # outside the checkout: the installed app must be the one tested
           meorav --selftest | tee st.txt
-          grep -q "lib /usr/lib/meorav/meorav/lib/" st.txt && grep -q "app: /usr/lib/meorav/meorav" st.txt
+          grep -q "lib /usr/lib/meorav/meorav/lib/" st.txt && grep -q "app: /usr/lib/meorav/meorav" st.txt && grep -q "avatars: 5/5" st.txt
           MEORAV_LIB_DIR=/usr/lib/meorav/meorav/lib PYTHONPATH=/usr/lib/meorav python3 -c \
             "from meorav import engine; print(engine.find_library('v2'))"
-      - name: Speak one line (real voice)
+      - name: Speak one line (real voices)
         if: github.event_name != 'push' || startsWith(github.ref, 'refs/tags/')
         run: |
           cd "$RUNNER_TEMP"
-          meorav --say "Testing Meorav on the desktop, before Shabbat, b'ezrat Hashem." -o speak.wav | tee speak.txt
-          python3 -c "import wave; w = wave.open('speak.wav'); s = w.getnframes() / w.getframerate(); print(f'{s:.1f} s'); assert s > 1.0"
-          echo "### Speak one line" >> "$GITHUB_STEP_SUMMARY"; cat speak.txt >> "$GITHUB_STEP_SUMMARY"
+          export MEORAV_CATALOG="$GITHUB_WORKSPACE/catalog/catalog.json"   # test the catalogue about to be published
+          meorav --list-voices
+          echo "### Speak one line (Linux)" >> "$GITHUB_STEP_SUMMARY"
+          for v in daniel josh; do
+            meorav --say "Testing Meorav on the desktop, before Shabbat, b'ezrat Hashem." --voice $v -o speak-$v.wav | tee speak-$v.txt
+            python3 -c "import wave,sys; w = wave.open(sys.argv[1]); s = w.getnframes() / w.getframerate(); print(f'{s:.1f} s'); assert 1.0 < s < 30" speak-$v.wav
+            cat speak-$v.txt >> "$GITHUB_STEP_SUMMARY"
+          done
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'push' || startsWith(github.ref, 'refs/tags/')
+        with: { name: speak-linux, path: "${{ runner.temp }}/speak-*.wav", retention-days: 14 }
       - name: Name
         run: echo "DEB=$(ls dist/meorav_*_amd64.deb)" >> "$GITHUB_ENV"
       - uses: actions/attest-build-provenance@v2
@@ -69,19 +78,84 @@ jobs:
       - uses: actions/upload-artifact@v4
         with: { name: deb, path: "desktop/${{ env.DEB }}" }
 
+  windows:
+    runs-on: windows-latest
+    defaults: { run: { working-directory: desktop, shell: pwsh } }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: ilammy/msvc-dev-cmd@v1   # dumpbin for the no-AVX check
+      - name: Tag matches version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          $v = (Select-String -Path meorav\__init__.py -Pattern '^__version__ = "(.*)"$').Matches[0].Groups[1].Value
+          if ("desktop-v$v" -ne $env:GITHUB_REF_NAME) { throw "tag $env:GITHUB_REF_NAME but __version__ is $v" }
+      - name: Tests
+        run: |
+          python -m pip install --disable-pip-version-check -q pytest numpy
+          python -m pytest -q tests
+      - name: Build
+        run: ./build-windows.ps1
+      - name: v2 build has no AVX
+        run: |
+          $n = (dumpbin /disasm build\win-v2\Release\meorav.dll | Select-String -SimpleMatch "ymm").Count
+          if ($n -ne 0) { throw "v2 meorav.dll uses AVX ($n ymm instructions)" }
+          $n3 = (dumpbin /disasm build\win-v3\Release\meorav.dll | Select-String -SimpleMatch "ymm").Count
+          "v3 ymm instructions: $n3"
+          dumpbin /dependents build\win-v3\Release\meorav.dll
+      - name: Unzip and self-test
+        run: |
+          $zip = (Get-Item dist\Meorav-*-windows-x64.zip).FullName
+          "ZIP=$zip" | Out-File -Append $env:GITHUB_ENV
+          Expand-Archive $zip -DestinationPath "$env:RUNNER_TEMP\m"
+          $dir = (Get-ChildItem "$env:RUNNER_TEMP\m" -Directory)[0].FullName
+          "MEORAV_DIR=$dir" | Out-File -Append $env:GITHUB_ENV
+          Set-Location $env:RUNNER_TEMP   # outside the checkout: the unzipped app must be the one tested
+          & "$dir\meorav-cli.cmd" --selftest | Tee-Object st.txt
+          if ($LASTEXITCODE) { throw "selftest failed" }
+          if (-not (Select-String -Path st.txt -SimpleMatch "$dir\app\meorav\lib\")) { throw "selftest did not load the packaged meorav.dll" }
+          if (-not (Select-String -Path st.txt -SimpleMatch "avatars: 5/5")) { throw "avatars missing" }
+          $env:MEORAV_CPU_LEVEL = "v2"; & "$dir\meorav-cli.cmd" --selftest
+          if ($LASTEXITCODE) { throw "v2 selftest failed" }
+      - name: Speak one line (real voice)
+        if: github.event_name != 'push' || startsWith(github.ref, 'refs/tags/')
+        run: |
+          Set-Location $env:RUNNER_TEMP
+          $env:MEORAV_CATALOG = "$env:GITHUB_WORKSPACE\catalog\catalog.json"   # test the catalogue about to be published
+          & "$env:MEORAV_DIR\meorav-cli.cmd" --say "Testing Meorav on Windows, before Shabbat, b'ezrat Hashem." --voice josh -o speak-josh.wav | Tee-Object speak.txt
+          if ($LASTEXITCODE) { throw "speak failed" }
+          python -c "import wave,sys; w = wave.open(sys.argv[1]); s = w.getnframes() / w.getframerate(); print(f'{s:.1f} s'); assert 1.0 < s < 30" speak-josh.wav
+          if ($LASTEXITCODE) { throw "bad wav" }
+          if (-not (Test-Path "$env:LOCALAPPDATA\Meorav\models\meorav-multi-voice")) { throw "model not under %LOCALAPPDATA%\Meorav" }
+          "### Speak one line (Windows)" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          Get-Content speak.txt | Out-File -Append $env:GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'push' || startsWith(github.ref, 'refs/tags/')
+        with: { name: speak-windows, path: "${{ runner.temp }}/speak-josh.wav", retention-days: 14 }
+      - uses: actions/attest-build-provenance@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with: { subject-path: "${{ env.ZIP }}" }
+      - uses: actions/upload-artifact@v4
+        with: { name: windows-zip, path: "${{ env.ZIP }}", compression-level: 0 }
+
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    needs: deb
+    needs: [deb, windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with: { name: deb, path: dist }
+      - uses: actions/download-artifact@v4
+        with: { name: windows-zip, path: dist }
       - name: Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Not "Latest": that stays the Android release. Not a prerelease either (house rule).
-          gh release create "$GITHUB_REF_NAME" dist/*.deb --latest=false \
-            --title "Meorav (beta) for Linux ${GITHUB_REF_NAME#desktop-v}" \
+          gh release create "$GITHUB_REF_NAME" dist/*.deb dist/*.zip --latest=false \
+            --title "Meorav (beta) for Linux and Windows ${GITHUB_REF_NAME#desktop-v}" \
             --notes-file .github/desktop-release-notes.md

@@ -1,12 +1,14 @@
 {
   "schema": 1,
-  "updated": "2026-11-09",
+  "updated": "2026-11-16",
   "voices": [
     {
       "id": "meorav-v2.2",
-      "name": "Meorav v2.2",
+      "name": "Meorav-Daniel v2.2",
       "version": "v2.2",
       "speaker": "daniel",
+      "speaker_name": "Daniel",
+      "speaker_accent": "Irish-accented English (Daniel Rosehill's own voice)",
       "lang": "english",
       "description": "Daniel Rosehill's voice: Irish-accented English with Hebrew words. Qwen3-TTS-12Hz-1.7B full fine-tune, converted with qwentts.cpp 5916bf7 from Hebrish/Meorav 936eea1a.",
       "hf_repo": "Hebrish/Meorav-GGUF",
@@ -52,6 +54,127 @@
               "role": "codec",
               "name": "qwen-tokenizer-12hz-Q8_0.gguf",
               "url": "https://cdn.hebrish.app/models/meorav/qwen-tokenizer-12hz-Q8_0.gguf",
+              "size": 291150624,
+              "sha256": "1883beeed99348fc35e23dd225e9082f93f6f8c109330a33d935baa8acdbfd94"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "meorav-multi-voice",
+      "name": "Meorav-Multi-Voice v1.0",
+      "version": "v1.0",
+      "speaker": "",
+      "lang": "english",
+      "mode": "base",
+      "poc": true,
+      "description": "Five designed voices from one model, chosen by x-vector reference clip. Proof of concept: trained on too little data; Hebrew words do not always come out right and gutturals (the ch in chag) are not always produced. Qwen3-TTS-12Hz-1.7B-Base full fine-tune, converted with qwentts.cpp 5916bf7 from Hebrish/Meorav-Multi-Voice 50226a5. The codec files are byte-identical to Meorav v2.2's.",
+      "hf_repo": "Hebrish/Meorav-Multi-Voice",
+      "speakers": [
+        {
+          "id": "josh",
+          "name": "Josh",
+          "accent": "American male",
+          "hf_file": "voices/american-male.wav",
+          "ref": {
+            "name": "american-male.wav",
+            "url": "https://cdn.hebrish.app/models/meorav-multi-voice/voices/american-male.wav",
+            "size": 384666,
+            "sha256": "5e32e4566ba9c798c9f0046b040bc073835d8e7a1f5807a49582fac96f197c74"
+          }
+        },
+        {
+          "id": "rivka",
+          "name": "Rivka",
+          "accent": "American female",
+          "hf_file": "voices/american-female.wav",
+          "ref": {
+            "name": "american-female.wav",
+            "url": "https://cdn.hebrish.app/models/meorav-multi-voice/voices/american-female.wav",
+            "size": 341804,
+            "sha256": "b1be1bc23bec91b2da3e2695c80699bf640442fa73955c8d26440b1eb8721529"
+          }
+        },
+        {
+          "id": "nigel",
+          "name": "Nigel",
+          "accent": "British male",
+          "hf_file": "voices/british-male.wav",
+          "ref": {
+            "name": "british-male.wav",
+            "url": "https://cdn.hebrish.app/models/meorav-multi-voice/voices/british-male.wav",
+            "size": 341804,
+            "sha256": "90ab34a013a3b62971ac4d5e80887ae7942e46cf0b5c6a8bd74ff04a3ee04302"
+          }
+        },
+        {
+          "id": "fiona",
+          "name": "Fiona",
+          "accent": "British female",
+          "hf_file": "voices/british-female.wav",
+          "ref": {
+            "name": "british-female.wav",
+            "url": "https://cdn.hebrish.app/models/meorav-multi-voice/voices/british-female.wav",
+            "size": 341804,
+            "sha256": "11fdca40eff9dd822dd61ec074dd2720412f23e5350707a1d10f502976ad1a3b"
+          }
+        },
+        {
+          "id": "bazza",
+          "name": "Bazza",
+          "accent": "Australian male",
+          "hf_file": "voices/australian-male.wav",
+          "ref": {
+            "name": "australian-male.wav",
+            "url": "https://cdn.hebrish.app/models/meorav-multi-voice/voices/australian-male.wav",
+            "size": 328844,
+            "sha256": "5f0963ac0cb7a1a70dcbfdd9dcc2825994afdc74d9a398814093261d484ff78b"
+          }
+        }
+      ],
+      "quants": [
+        {
+          "id": "Q4_K_M",
+          "label": "Q4_K_M (recommended)",
+          "default": true,
+          "min_ram_gb": 8,
+          "note": "About 4 GB of RAM while speaking (expected, as Meorav v2.2; not measured for this model).",
+          "files": [
+            {
+              "role": "talker",
+              "name": "qwen-talker-1.7b-base-Q4_K_M.gguf",
+              "url": "https://cdn.hebrish.app/models/meorav-multi-voice/qwen-talker-1.7b-base-Q4_K_M.gguf",
+              "size": 1219245248,
+              "sha256": "9cca3ab238395e8707f8c3cc0697e080d76cec89372c843bb378c45129519c3c"
+            },
+            {
+              "role": "codec",
+              "name": "qwen-tokenizer-12hz-Q4_K_M.gguf",
+              "url": "https://cdn.hebrish.app/models/meorav-multi-voice/qwen-tokenizer-12hz-Q4_K_M.gguf",
+              "size": 254974752,
+              "sha256": "cf3788b4d50aaa665fb6e57c170396aae03a3555fea52d2b5d0cda902d658039"
+            }
+          ]
+        },
+        {
+          "id": "Q8_0",
+          "label": "Q8_0 (needs 12 GB+ RAM)",
+          "default": false,
+          "min_ram_gb": 12,
+          "note": "About 6 GB of RAM while speaking (expected). Slightly higher quality, slower.",
+          "files": [
+            {
+              "role": "talker",
+              "name": "qwen-talker-1.7b-base-Q8_0.gguf",
+              "url": "https://cdn.hebrish.app/models/meorav-multi-voice/qwen-talker-1.7b-base-Q8_0.gguf",
+              "size": 2079448256,
+              "sha256": "148c87b26929e0f3c8467dc7a37684a3b3451113064430655c3be002c5d6ba28"
+            },
+            {
+              "role": "codec",
+              "name": "qwen-tokenizer-12hz-Q8_0.gguf",
+              "url": "https://cdn.hebrish.app/models/meorav-multi-voice/qwen-tokenizer-12hz-Q8_0.gguf",
               "size": 291150624,
               "sha256": "1883beeed99348fc35e23dd225e9082f93f6f8c109330a33d935baa8acdbfd94"
             }

@@ -53,14 +53,16 @@ Installed-Size: $(du -sk "$ROOT/usr" | cut -f1)
 Maintainer: Hebrish <info@hebrish.app>
 Homepage: https://github.com/Hebrish-ASR/Meorav-App
 Depends: libc6 (>= 2.35), python3 (>= 3.10), python3-pyside6.qtwidgets, python3-numpy, python3-sounddevice, libportaudio2
-Description: Meorav (beta): text to speech in Daniel Rosehill's voice
- Experimental public test. Type text and hear it spoken in Daniel Rosehill's
- cloned voice (Irish-accented English with Hebrew words), generated on your
- computer's CPU with qwentts.cpp (Qwen3-TTS-12Hz-1.7B fine-tune). The voice
- (1.44 GB, or 2.33 GB at higher quality) is downloaded on first use. Speech
+Description: Meorav (beta): Hebrish text to speech on your CPU
+ Experimental public test. Type text and hear it spoken with Hebrew words
+ mixed into English, generated on your computer's CPU with qwentts.cpp
+ (Qwen3-TTS-12Hz-1.7B fine-tunes). Voices: Daniel Rosehill's own cloned
+ voice (Meorav v2.2), and as a proof of concept five designed voices from
+ Meorav-Multi-Voice: Josh, Rivka, Nigel, Fiona and Bazza. A model (about
+ 1.4 GB, or 2.3 GB at higher quality) is downloaded on first use. Speech
  can be slower than real time. Play the result or save it as WAV, or run
- "meorav --say TEXT -o out.wav" in a terminal.
- The app is MIT; the voice model is licensed for non-commercial use.
+ "meorav --say TEXT --voice josh -o out.wav" in a terminal.
+ The app is MIT; the voice models are licensed for non-commercial use.
 CTRL
 mkdir -p dist
 OUT="dist/${PKG}_${VERSION}-${DEB_REVISION}_${ARCH}.deb"
