@@ -190,6 +190,9 @@ Verified:
   | 43879833360 | Linux | v2.2 / daniel | 5.1 s | 14.6 s | 2.85 | 1.6 s |
   | 43879833360 | Linux | Multi-Voice / josh | 3.5 s | 10.4 s | 2.95 | 1.6 s |
   | 43879833360 | Windows (`windows-latest`, unzipped portable zip) | Multi-Voice / josh | 3.4 s | 12.1 s | 3.53 | 1.5 s |
+  | 43882002922 (tag `desktop-v0.2.0`) | Linux | v2.2 / daniel | 4.5 s | 11.6 s | 2.60 | 1.5 s |
+  | 43882002922 | Linux | Multi-Voice / josh | 4.2 s | 11.4 s | 2.69 | 1.5 s |
+  | 43882002922 | Windows | Multi-Voice / josh | 3.4 s | 7.5 s | 2.22 | 1.0 s |
 
   Runner speed varies between runs (same code, Linux RTF 1.97 vs 2.85). The two Linux WAVs of run
   43878402456 are 24 kHz, non-silent (RMS 0.085 / 0.090, 66–68 % voiced 20 ms frames), 4.2 s and 3.6 s.
@@ -198,6 +201,13 @@ Verified:
 - Windows: `meorav.dll` (MSVC 14.51, VS 18) depends only on `KERNEL32.dll` and `ADVAPI32.dll`; the
   zip (108 MB) self-tests from outside the checkout with both the v3 and the forced v2 DLL
   (`audio: MME`, `avatars: 5/5`); the model landed in `%LOCALAPPDATA%\Meorav\models\`.
+- Release `desktop-v0.2.0` (2026-11-16, run 43882002922, not a prerelease, not Latest):
+  `meorav_0.2.0-1_amd64.deb` (2,661,512 bytes, SHA-256 `8ad060904e5413f22a48422bdbc01c566fe0539dc0928bc2afdbfc60978f2938`)
+  and `Meorav-0.2.0-windows-x64.zip` (113,422,557 bytes, SHA-256 `ee0be5f2233091bafa95d4909a7bd27a390ff9317d08e832a28afe00c04c112c`),
+  one build-provenance attestation each. The Hebrish APT index lists `meorav` 0.1.0-1 and 0.2.0-1
+  (published with Hebrish-App `desktop/scripts/publish-apt.sh`); the pool file is served (200, same size).
+- `https://cdn.hebrish.app/models/meorav/catalog.json` is byte-identical to `catalog/catalog.json`
+  (SHA-256 `db05ee62…2aafb`, uploaded 2026-11-16).
 - The window (offscreen on the laptop, fake catalogue, no synthesis): model switch, five avatar
   buttons with name + accent, red "Proof of concept" badge and note.
 
