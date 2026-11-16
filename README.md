@@ -2,8 +2,11 @@
 
 Experimental Android text-to-speech app: type text, and it is spoken in Daniel Rosehill's cloned
 voice (Irish-accented English with Hebrew words), generated **on the phone**. Public testing
-build, separate from the Hebrish dictation (speech-to-text) app. A Linux desktop version (package
-`meorav`, Hebrish APT repo) is in [`desktop/`](desktop/README.md) since 0.1.0 (2026-11-09).
+build, separate from the Hebrish dictation (speech-to-text) app. A desktop version (Linux: package
+`meorav`, Hebrish APT repo; Windows: portable zip since 0.2.0) is in [`desktop/`](desktop/README.md)
+since 0.1.0 (2026-11-09). Since desktop 0.2.0 (2026-11-16) the desktop app also speaks the five
+Meorav-Multi-Voice voices (Josh, Rivka, Nigel, Fiona, Bazza; proof of concept); the Android app
+still uses only Daniel's voice (the catalogue's first entry).
 
 | | |
 | --- | --- |
@@ -59,6 +62,13 @@ model since 2026-11-02, overwritten by each new version, so only `catalog.json`'
 
 1. copied into the APK's assets at build time (`copyCatalog` task) as the offline fallback, and
 2. published at `https://cdn.hebrish.app/models/meorav/catalog.json` (`public, max-age=300`).
+
+Since 2026-11-16 the catalogue has a second entry, `meorav-multi-voice` (Meorav-Multi-Voice v1.0,
+qwentts base mode, five voices picked by reference clip; files in `models/meorav-multi-voice/`). Only
+the desktop app 0.2.0+ uses it; it carries every key Android 0.1.0's `Catalog.kt` requires
+(`"speaker": ""`), so the Android app parses the file and keeps using the first entry. Format and
+hashes: `desktop/README.md`, "Models and voices". Keep Daniel's model first until the Android app
+learns to choose.
 
 On every launch the app fetches the remote copy; if it parses (schema 1, at least one voice) it is
 cached in `filesDir/catalog.json` and used. The app uses the **first voice** in the list. So

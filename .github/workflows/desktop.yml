@@ -100,11 +100,19 @@ jobs:
       - name: Build
         run: ./build-windows.ps1
       - name: v2 build has no AVX
+        # Checked on our static libraries (ggml, ggml-base, ggml-cpu, qwen-core), not on meorav.dll:
+        # the DLL also holds the static MSVC CRT, whose memcpy/memset carry AVX paths behind a
+        # runtime CPUID check (__isa_available); those are safe and made the DLL count 215 (run 43878402456).
         run: |
-          $n = (dumpbin /disasm build\win-v2\Release\meorav.dll | Select-String -SimpleMatch "ymm").Count
-          if ($n -ne 0) { throw "v2 meorav.dll uses AVX ($n ymm instructions)" }
-          $n3 = (dumpbin /disasm build\win-v3\Release\meorav.dll | Select-String -SimpleMatch "ymm").Count
-          "v3 ymm instructions: $n3"
+          $libs = Get-ChildItem -Recurse -Filter *.lib build\win-v2 | Where-Object { $_.Name -match '^(ggml|qwen)' }
+          if ($libs.Count -lt 3) { throw "expected ggml*/qwen-core .lib files, found: $($libs.Name)" }
+          foreach ($l in $libs) {
+            $n = (dumpbin /disasm $l.FullName | Select-String -SimpleMatch "ymm").Count
+            "$($l.Name): $n ymm"
+            if ($n -ne 0) { throw "v2 $($l.Name) uses AVX ($n ymm instructions)" }
+          }
+          $l3 = Get-ChildItem -Recurse -Filter ggml-cpu.lib build\win-v3
+          "v3 ggml-cpu.lib ymm: $((dumpbin /disasm $l3[0].FullName | Select-String -SimpleMatch 'ymm').Count)"
           dumpbin /dependents build\win-v3\Release\meorav.dll
       - name: Unzip and self-test
         run: |
