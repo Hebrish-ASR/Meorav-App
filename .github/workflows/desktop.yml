@@ -102,9 +102,10 @@ jobs:
       - name: v2 build has no unguarded AVX
         # Checked on our static libraries (ggml, ggml-base, ggml-cpu, qwen-core), not on meorav.dll,
         # which also holds the static MSVC CRT (215 ymm hits in run 43878402456). In the libraries
-        # the only hits (run 43879833360, MSVC 14.51) are 5 in an inlined `wmemchr` in ggml.lib: the
-        # MSVC headers' vectorised wmemchr, which must branch on __isa_available (runtime CPUID)
-        # before its AVX2 path. A hit in a function that does not read __isa_available fails the job.
+        # the only hits (runs 43879833360, 43880741147; MSVC 14.51) are 5 in an inlined `wmemchr` in
+        # ggml.lib, from the MSVC/UCRT headers: it tests `_Avx2WmemEnabled` (a runtime CPUID flag)
+        # and takes a plain loop when it is 0, before the AVX2 path. A ymm hit in a function that
+        # reads neither such a flag nor __isa_available fails the job.
         run: |
           $libs = Get-ChildItem -Recurse -Filter *.lib build\win-v2 | Where-Object { $_.Name -match '^(ggml|qwen)' }
           if ($libs.Count -lt 3) { throw "expected ggml*/qwen-core .lib files, found: $($libs.Name)" }
@@ -119,7 +120,7 @@ jobs:
               if ($seen.ContainsKey($lab.LineNumber)) { continue }
               $seen[$lab.LineNumber] = 1
               $body = $d[($lab.LineNumber - 1)..($h.LineNumber - 1)]
-              $guard = $body | Select-String -SimpleMatch "isa_available"
+              $guard = $body | Select-String -Pattern 'isa_available|Avx2\w*Enabled'
               "  $($l.Name) $($lab.Line) first ymm at line $($h.LineNumber); guard: $(if ($guard) { $guard[0].Line.Trim() } else { 'NONE' })"
               $body | Select-Object -First 40 | ForEach-Object { "    $_" }
               if (-not $guard) { $bad += "$($l.Name):$($lab.Line)" }

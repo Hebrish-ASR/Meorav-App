@@ -231,7 +231,7 @@ Not verified:
   `checkpoints/Qwen3-TTS-Tokenizer-12Hz` (the repo's `speech_tokenizer/`).
 - Desktop 0.2.0, Windows: a `dumpbin /disasm meorav.dll | ymm` check fails on the v2 build because the
   static MSVC CRT carries CPUID-dispatched AVX code; check the ggml/qwen static libraries instead
-  (see the workflow step "v2 build has no unguarded AVX"). The Windows default text encoding is not
+  (see the workflow step "v2 build has no unguarded AVX"; the only hits are an inlined UCRT `wmemchr` guarded by `_Avx2WmemEnabled`). The Windows default text encoding is not
   UTF-8: every `read_text`/`write_text` passes `encoding="utf-8"`.
 - On the laptop `sdkmanager` exited 2 with "...location of your Java installation" because
   `JAVA_HOME` was unset; run it with `JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64`.
